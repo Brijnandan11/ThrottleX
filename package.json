@@ -1,0 +1,28 @@
+{
+  "name": "throttlex",
+  "version": "1.0.0",
+  "description": "A small, focused system project: cap request rate per client fairly, while still allowing short bursts.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Brijnandan11/ThrottleX.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Brijnandan11/ThrottleX/issues"
+  },
+  "homepage": "https://github.com/Brijnandan11/ThrottleX#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

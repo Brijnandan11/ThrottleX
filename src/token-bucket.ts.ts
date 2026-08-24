@@ -1,4 +1,4 @@
-class TokenBucket{
+export class TokenBucket{
     private tokens: number
     private lastRefillMs: number
 
@@ -22,5 +22,16 @@ class TokenBucket{
         )
 
         this.lastRefillMs = now
+    }
+
+    tryConsume(now: number = Date.now()) : boolean{
+         this.refill(now)
+
+         if(this.tokens < 1){
+            return false
+         }
+
+          this.tokens-= 1
+          return true
     }
 }

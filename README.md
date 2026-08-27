@@ -33,14 +33,10 @@ is built afterward as a comparison extension.
 
 1. **In-memory token bucket** — single process, `Map<clientId, {tokens, lastRefill}>`.
    Prove the algorithm and refill math work before adding network calls.
-2. **Redis-backed, naive** — `INCR` + `EXPIRE` per client per window.
-   Simple but has a race condition: INCR and EXPIRE are two round trips,
-   not atomic, so concurrent requests can double-count or miss the TTL reset.
-3. **Redis-backed, atomic** — a Lua script (`EVAL`) that reads the
+2. **Redis-backed, atomic** — a Lua script (`EVAL`) that reads the
    current token count and last-refill timestamp, computes the refill,
-   checks/decrements, and writes the new state back — all in one atomic
-   round trip. This is the version that's actually correct under
-   concurrency and is what ships.
+   checks/decrements, and writes the new state back in one atomic round
+   trip. This is the version that ships.
 
 ## Explicitly out of scope
 
@@ -51,35 +47,32 @@ is built afterward as a comparison extension.
 
 - **Burst allowed** — a client with a full bucket can fire `N` requests
   back-to-back and all succeed.
-- **Sustained rate rejected** — a client firing requests faster than the
-  refill rate gets throttled once the bucket empties, even if under the
-  burst cap initially.
-- **TTL / reset behavior** — bucket state correctly expires/resets after
-  a period of inactivity (Redis key TTL, or in-memory cleanup).
+- **Refill math** — a client firing requests faster than the refill rate
+  gets throttled once the bucket empties, and then recovers as time
+  passes.
+- **Redis forwarding** — the Redis wrapper sends the expected key and
+  arguments into the Lua script and parses the reply.
+- **TTL / reset behavior** — bucket state correctly expires after a
+  period of inactivity.
 
 ## Failure mode: Redis unavailable
 
-Decision: **[fail open or fail closed — decide and document here once
-built, including why]**.
+Decision: **fail closed**.
 
-- *Fail open* (allow all requests when Redis is down) prioritizes
-  availability — rate limiting is a protection layer, not the core
-  service, so an outage in it shouldn't take down the API. Risk:
-  no protection against abuse/overload during the outage.
-- *Fail closed* (reject all requests when Redis is down) prioritizes
-  safety — never let unlimited traffic through. Risk: a Redis blip
-  becomes a full outage for legitimate clients.
-
-Document the actual choice made, the reasoning, and any mitigation
-(e.g. local in-memory fallback bucket, circuit breaker around Redis)
-once implemented.
+- *Why:* this project is a protection primitive, so the safer default is
+  to stop traffic rather than silently disable the limit when Redis is
+  unhealthy.
+- *Tradeoff:* a Redis outage can now block legitimate requests.
+- *Mitigation:* keep the in-memory `TokenBucket` available as a local
+  fallback for development and tests, and consider a circuit breaker in a
+  real service integration.
 
 ## Extension
 
-- **Leaky-bucket variant** implemented alongside the token-bucket
-  version for direct comparison — same interface, different algorithm,
-  so behavior differences (burst vs no-burst) can be demonstrated with
-  the same test suite/benchmark.
+- **Leaky-bucket variant** can still be added later for direct
+  comparison — same interface, different algorithm, so behavior
+  differences (burst vs no-burst) can be demonstrated with the same test
+  suite or benchmark.
 
 ## What production actually uses instead
 
@@ -94,6 +87,11 @@ This project is for understanding the mechanism, not replacing these.
 ## Stack
 
 Node.js, TypeScript, Redis (Lua via `EVAL`), Docker.
+
+## Scripts
+
+- `npm test` runs the Vitest suite.
+- `npm run typecheck` runs `tsc --noEmit`.
 
 ## Research
 
